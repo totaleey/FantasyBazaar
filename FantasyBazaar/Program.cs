@@ -1,13 +1,21 @@
-using Microsoft.EntityFrameworkCore;
 using FantasyBazaar.Api.Data;
+using FantasyBazaar.Api.Endpoints;
+using FantasyBazaar.Api.Hubs;
+using FantasyBazaar.Api.Models;
+using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add PostgreSQL with retry
+// Add SignalR for real-time updates
+builder.Services.AddSignalR();
+
+// Add PostgreSQL with retry capability
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), npgsqlOptions =>
@@ -19,15 +27,36 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     });
 });
 
-// Add Redis
+// Add Redis with graceful failure - if Redis is down, app still works
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
-    var configuration = builder.Configuration["Redis:ConnectionString"] ?? "redis:6379";
-    return ConnectionMultiplexer.Connect(configuration);
+    try
+    {
+        var configuration = builder.Configuration["Redis:ConnectionString"] ?? "redis:6379";
+        var logger = sp.GetRequiredService<ILogger<Program>>();
+
+        var options = ConfigurationOptions.Parse(configuration);
+        options.ConnectTimeout = 3000;  // 3 second timeout
+        options.AbortOnConnectFail = false;  // DON'T crash if Redis is down
+
+        var redis = ConnectionMultiplexer.Connect(options);
+        logger.LogInformation("Redis connected successfully");
+        return redis;
+    }
+    catch (Exception ex)
+    {
+        var logger = sp.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex, "Redis connection failed - continuing without cache");
+        return null;  // Graceful degradation
+    }
 });
+
+// Add static files for the UI
+builder.Services.AddDirectoryBrowser();
 
 var app = builder.Build();
 
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -36,18 +65,83 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/health", () => Results.Ok(new { status = "alive", timestamp = DateTime.UtcNow }));
+// Enable static files for the HTML UI
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
-app.MapGet("/api/items", async (AppDbContext db) =>
+// Health check - reports dependency status
+app.MapGet("/health", async (AppDbContext db, IConnectionMultiplexer? redis) =>
 {
-    var items = await db.Items.ToListAsync();
-    return Results.Ok(items);
+    var status = new
+    {
+        status = "alive",
+        timestamp = DateTime.UtcNow,
+        database = await db.Database.CanConnectAsync(),
+        redis = redis?.IsConnected ?? false,
+        signalR = true  // SignalR always "up" from health perspective
+    };
+    return Results.Ok(status);
 });
 
-// Ensure database is created with retry
+// Inventory endpoint - uses cache if Redis is up
+app.MapGet("/api/items", async (AppDbContext db, IConnectionMultiplexer? redis, ILogger<Program> logger) =>
+{
+    // Try cache first, but don't fail if Redis is down
+    if (redis?.IsConnected == true)
+    {
+        try
+        {
+            var db_cache = redis.GetDatabase();
+            var cached = await db_cache.StringGetAsync("all_items");
+            if (cached.HasValue)
+            {
+                logger.LogDebug("Returning cached inventory");
+                var cachedString = cached.ToString();
+                if (!string.IsNullOrEmpty(cachedString))
+                {
+                    var cachedItems = System.Text.Json.JsonSerializer.Deserialize<List<Item>>(cachedString);
+                    return Results.Ok(cachedItems);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Redis cache read failed - falling back to DB");
+        }
+    }
+
+    // Fallback to database
+    var dbItems = await db.Items.ToListAsync();
+
+    // Update cache in background if Redis is up (don't await - fire and forget)
+    if (redis?.IsConnected == true)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var db_cache = redis.GetDatabase();
+                var serialized = System.Text.Json.JsonSerializer.Serialize(dbItems);
+                await db_cache.StringSetAsync("all_items", serialized, TimeSpan.FromSeconds(30));
+            }
+            catch { /* Cache failure doesn't matter */ }
+        });
+    }
+
+    return Results.Ok(dbItems);
+});
+
+// Map purchase endpoints
+app.MapPurchaseEndpoints();
+
+// Map SignalR hub
+app.MapHub<BazaarHub>("/bazaarHub");
+
+// Ensure database is created with retry logic
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var retryCount = 0;
     var maxRetries = 10;
 
@@ -56,13 +150,13 @@ using (var scope = app.Services.CreateScope())
         try
         {
             await db.Database.EnsureCreatedAsync();
-            Console.WriteLine("Database connection successful!");
+            logger.LogInformation("Database connection successful!");
             break;
         }
         catch (Exception ex)
         {
             retryCount++;
-            Console.WriteLine($"Database connection attempt {retryCount} failed: {ex.Message}");
+            logger.LogWarning(ex, "Database connection attempt {RetryCount} failed", retryCount);
             if (retryCount >= maxRetries) throw;
             await Task.Delay(TimeSpan.FromSeconds(3));
         }

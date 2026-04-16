@@ -1,0 +1,164 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Fantasy Bazaar</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .item {
+            border: 1px solid #444;
+            padding: 10px;
+            margin: 10px;
+            background: #16213e;
+            border-radius: 5px;
+        }
+
+        .in-stock {
+            color: #4caf50;
+        }
+
+        .low-stock {
+            color: #ff9800;
+        }
+
+        .out-of-stock {
+            color: #f44336;
+        }
+
+        button {
+            padding: 5px 10px;
+            margin: 5px;
+            cursor: pointer;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+
+            button:hover {
+                background: #ff6b6b;
+            }
+
+            button:disabled {
+                background: #555;
+                cursor: not-allowed;
+            }
+
+        .price {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .status-badge {
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .online {
+            color: #4caf50;
+        }
+
+        .offline {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏪 Fantasy Bazaar</h1>
+    <div id="status">🟢 Connecting to real-time updates...</div>
+    <div id="inventory"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        let connection = null;
+
+        // Connect to SignalR (with fallback polling)
+        function connectSignalR() {
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/bazaarHub")
+                .withAutomaticReconnect([0, 2000, 5000, 10000])
+                .build();
+
+            connection.on("StockUpdated", (update) => {
+                console.log("Real-time update:", update);
+                document.getElementById("status").innerHTML = "🟢 Live updates active";
+                loadInventory(); // Refresh display
+            });
+
+            connection.start()
+                .then(() => {
+                    document.getElementById("status").innerHTML = "🟢 Live updates active";
+                })
+                .catch(err => {
+                    console.warn("SignalR failed, falling back to polling:", err);
+                    document.getElementById("status").innerHTML = "🟡 Real-time unavailable - polling every 5 seconds";
+                    // Fallback to polling every 5 seconds
+                    setInterval(loadInventory, 5000);
+                });
+        }
+
+        // Load inventory from API
+        async function loadInventory() {
+            try {
+                const response = await fetch('/api/items');
+                const items = await response.json();
+                displayItems(items);
+            } catch (err) {
+                console.error("Failed to load inventory:", err);
+                document.getElementById("inventory").innerHTML = "<p>❌ Failed to load inventory</p>";
+            }
+        }
+
+        // Display items
+        function displayItems(items) {
+            const container = document.getElementById("inventory");
+            container.innerHTML = items.map(item => `
+                    <div class="item">
+                        <strong>${item.name}</strong> ${item.isSpecial ? '✨' : ''}
+                        <span class="status-badge ${item.stock > 5 ? 'in-stock' : (item.stock > 0 ? 'low-stock' : 'out-of-stock')}">
+                            ${item.stock > 0 ? `${item.stock} in stock` : 'SOLD OUT'}
+                        </span>
+                        <div class="price">${item.currentPrice} gold</div>
+                        <div>${item.description}</div>
+                        <button onclick="purchaseItem(${item.id})" ${item.stock === 0 ? 'disabled' : ''}>
+                            Buy 1
+                        </button>
+                    </div>
+                `).join('');
+        }
+
+        // Purchase item
+        async function purchaseItem(itemId) {
+            try {
+                const response = await fetch('/api/purchase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ itemId: itemId, quantity: 1, buyerType: "User" })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(`✅ Purchased ${result.itemName} for ${result.pricePaid} gold!`);
+                    loadInventory(); // Refresh immediately
+                } else {
+                    alert(`❌ Purchase failed: ${result.title || result.message || 'Unknown error'}`);
+                }
+            } catch (err) {
+                console.error("Purchase failed:", err);
+                alert("❌ Purchase failed - check console");
+            }
+        }
+
+        // Start
+        loadInventory();
+        connectSignalR();
+    </script>
+</body>
+</html>
