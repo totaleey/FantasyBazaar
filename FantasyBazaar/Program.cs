@@ -8,14 +8,11 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add SignalR for real-time updates
 builder.Services.AddSignalR();
 
-// Add PostgreSQL with retry capability
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), npgsqlOptions =>
@@ -27,7 +24,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     });
 });
 
-// Add Redis with graceful failure - if Redis is down, app still works
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
     try
@@ -36,8 +32,8 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
         var logger = sp.GetRequiredService<ILogger<Program>>();
 
         var options = ConfigurationOptions.Parse(configuration);
-        options.ConnectTimeout = 3000;  // 3 second timeout
-        options.AbortOnConnectFail = false;  // DON'T crash if Redis is down
+        options.ConnectTimeout = 3000;
+        options.AbortOnConnectFail = false;
 
         var redis = ConnectionMultiplexer.Connect(options);
         logger.LogInformation("Redis connected successfully");
@@ -47,16 +43,14 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     {
         var logger = sp.GetRequiredService<ILogger<Program>>();
         logger.LogWarning(ex, "Redis connection failed - continuing without cache");
-        return null;  // Graceful degradation
+        return null;
     }
 });
 
-// Add static files for the UI
 builder.Services.AddDirectoryBrowser();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -65,7 +59,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Enable static files for the HTML UI
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -78,7 +71,7 @@ app.MapGet("/health", async (AppDbContext db, IConnectionMultiplexer? redis) =>
         timestamp = DateTime.UtcNow,
         database = await db.Database.CanConnectAsync(),
         redis = redis?.IsConnected ?? false,
-        signalR = true  // SignalR always "up" from health perspective
+        signalR = true
     };
     return Results.Ok(status);
 });
@@ -86,7 +79,6 @@ app.MapGet("/health", async (AppDbContext db, IConnectionMultiplexer? redis) =>
 // Inventory endpoint - uses cache if Redis is up
 app.MapGet("/api/items", async (AppDbContext db, IConnectionMultiplexer? redis, ILogger<Program> logger) =>
 {
-    // Try cache first, but don't fail if Redis is down
     if (redis?.IsConnected == true)
     {
         try
@@ -110,10 +102,8 @@ app.MapGet("/api/items", async (AppDbContext db, IConnectionMultiplexer? redis, 
         }
     }
 
-    // Fallback to database
     var dbItems = await db.Items.ToListAsync();
 
-    // Update cache in background if Redis is up (don't await - fire and forget)
     if (redis?.IsConnected == true)
     {
         _ = Task.Run(async () =>
@@ -131,10 +121,8 @@ app.MapGet("/api/items", async (AppDbContext db, IConnectionMultiplexer? redis, 
     return Results.Ok(dbItems);
 });
 
-// Map purchase endpoints
 app.MapPurchaseEndpoints();
 
-// Map SignalR hub
 app.MapHub<BazaarHub>("/bazaarHub");
 
 // Ensure database is created with retry logic
