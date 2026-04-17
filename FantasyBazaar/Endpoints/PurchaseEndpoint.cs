@@ -16,83 +16,88 @@ public static class PurchaseEndpoints
             if (request.Quantity <= 0)
                 return Results.BadRequest("Quantity must be positive");
 
-            // Use database transaction with row lock - THIS IS YOUR CORRECTNESS GUARANTEE
-            await using var transaction = await db.Database.BeginTransactionAsync();
+            // Use execution strategy to handle retries with transactions
+            var strategy = db.Database.CreateExecutionStrategy();
 
-            try
+            return await strategy.ExecuteAsync(async () =>
             {
-                // SELECT ... FOR UPDATE - locks the row exclusively
-                var item = await db.Items
-                    .FromSqlRaw("SELECT * FROM \"Items\" WHERE \"Id\" = {0} FOR UPDATE", request.ItemId)
-                    .FirstOrDefaultAsync();
+                await using var transaction = await db.Database.BeginTransactionAsync();
 
-                if (item == null)
-                    return Results.NotFound($"Item {request.ItemId} not found");
-
-                // Check stock
-                if (item.Stock < request.Quantity)
+                try
                 {
-                    logger.LogWarning("Purchase failed: Item {ItemName} has only {Stock} left, requested {Quantity}",
-                        item.Name, item.Stock, request.Quantity);
-                    return Results.BadRequest($"Only {item.Stock} left in stock");
-                }
+                    // SELECT ... FOR UPDATE - locks the row exclusively
+                    var item = await db.Items
+                        .FromSqlRaw("SELECT * FROM \"Items\" WHERE \"Id\" = {0} FOR UPDATE", request.ItemId)
+                        .FirstOrDefaultAsync();
 
-                // Update stock
-                var originalPrice = item.CurrentPrice;
-                item.Stock -= request.Quantity;
-                await db.SaveChangesAsync();
+                    if (item == null)
+                        return Results.NotFound($"Item {request.ItemId} not found");
 
-                // Record transaction
-                var transactionRecord = new Transaction
-                {
-                    ItemId = item.Id,
-                    ItemName = item.Name,
-                    Quantity = request.Quantity,
-                    PriceAtPurchase = originalPrice,
-                    TotalAmount = originalPrice * request.Quantity,
-                    Timestamp = DateTime.UtcNow,
-                    BuyerType = request.BuyerType ?? "User",
-                    TransactionId = Guid.NewGuid().ToString()
-                };
-                db.Transactions.Add(transactionRecord);
-                await db.SaveChangesAsync();
-
-                // Commit the transaction - this is where it becomes permanent
-                await transaction.CommitAsync();
-
-                logger.LogInformation("Purchase successful: {Quantity}x {ItemName} for {BuyerType}",
-                    request.Quantity, item.Name, request.BuyerType ?? "User");
-
-                // Broadcast real-time update via SignalR (if available - graceful degradation)
-                if (hubContext != null)
-                {
-                    try
+                    // Check stock
+                    if (item.Stock < request.Quantity)
                     {
-                        await BazaarHub.BroadcastStockUpdate(hubContext, item.Id, item.Name, item.Stock, item.CurrentPrice);
+                        logger.LogWarning("Purchase failed: Item {ItemName} has only {Stock} left, requested {Quantity}",
+                            item.Name, item.Stock, request.Quantity);
+                        return Results.BadRequest($"Only {item.Stock} left in stock");
                     }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "SignalR broadcast failed - continuing anyway");
-                    }
-                }
 
-                // Return success - using positional constructor for record
-                return Results.Ok(new PurchaseResult(
-                    Success: true,
-                    ItemId: item.Id,
-                    ItemName: item.Name,
-                    QuantityPurchased: request.Quantity,
-                    PricePaid: originalPrice,
-                    TotalPaid: originalPrice * request.Quantity,
-                    RemainingStock: item.Stock
-                ));
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                logger.LogError(ex, "Purchase failed for item {ItemId}", request.ItemId);
-                return Results.StatusCode(500);
-            }
+                    // Update stock
+                    var originalPrice = item.CurrentPrice;
+                    item.Stock -= request.Quantity;
+                    await db.SaveChangesAsync();
+
+                    // Record transaction
+                    var transactionRecord = new Transaction
+                    {
+                        ItemId = item.Id,
+                        ItemName = item.Name,
+                        Quantity = request.Quantity,
+                        PriceAtPurchase = originalPrice,
+                        TotalAmount = originalPrice * request.Quantity,
+                        Timestamp = DateTime.UtcNow,
+                        BuyerType = request.BuyerType ?? "User",
+                        TransactionId = Guid.NewGuid().ToString()
+                    };
+                    db.Transactions.Add(transactionRecord);
+                    await db.SaveChangesAsync();
+
+                    // Commit the transaction - this is where it becomes permanent
+                    await transaction.CommitAsync();
+
+                    logger.LogInformation("Purchase successful: {Quantity}x {ItemName} for {BuyerType}",
+                        request.Quantity, item.Name, request.BuyerType ?? "User");
+
+                    // Broadcast real-time update via SignalR (if available - graceful degradation)
+                    if (hubContext != null)
+                    {
+                        try
+                        {
+                            await BazaarHub.BroadcastStockUpdate(hubContext, item.Id, item.Name, item.Stock, item.CurrentPrice);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "SignalR broadcast failed - continuing anyway");
+                        }
+                    }
+
+                    // Return success - using positional constructor for record
+                    return Results.Ok(new PurchaseResult(
+                        Success: true,
+                        ItemId: item.Id,
+                        ItemName: item.Name,
+                        QuantityPurchased: request.Quantity,
+                        PricePaid: originalPrice,
+                        TotalPaid: originalPrice * request.Quantity,
+                        RemainingStock: item.Stock
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    logger.LogError(ex, "Purchase failed for item {ItemId}", request.ItemId);
+                    return Results.StatusCode(500);
+                }
+            });
         });
     }
 }
