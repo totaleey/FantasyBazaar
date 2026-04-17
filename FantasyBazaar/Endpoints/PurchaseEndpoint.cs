@@ -61,7 +61,6 @@ public static class PurchaseEndpoints
                     db.Transactions.Add(transactionRecord);
                     await db.SaveChangesAsync();
 
-                    // Commit the transaction - this is where it becomes permanent
                     await transaction.CommitAsync();
 
                     logger.LogInformation("Purchase successful: {Quantity}x {ItemName} for {BuyerType}",
@@ -80,7 +79,6 @@ public static class PurchaseEndpoints
                         }
                     }
 
-                    // Return success - using positional constructor for record
                     return Results.Ok(new PurchaseResult(
                         Success: true,
                         ItemId: item.Id,
@@ -102,7 +100,6 @@ public static class PurchaseEndpoints
     }
 }
 
-// DTOs - defined as records with positional parameters
 public record PurchaseRequest(int ItemId, int Quantity, string? BuyerType = "User");
 
 public record PurchaseResult(
