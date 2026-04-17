@@ -70,8 +70,8 @@
     </style>
 </head>
 <body>
-    <h1>🏪 Fantasy Bazaar</h1>
-    <div id="status">🟢 Connecting to real-time updates...</div>
+    <h1>Fantasy Bazaar</h1>
+    <div id="status">Connecting to real-time updates...</div>
     <div id="inventory"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
@@ -87,17 +87,17 @@
 
             connection.on("StockUpdated", (update) => {
                 console.log("Real-time update:", update);
-                document.getElementById("status").innerHTML = "🟢 Live updates active";
+                document.getElementById("status").innerHTML = "Live updates active";
                 loadInventory(); // Refresh display
             });
 
             connection.start()
                 .then(() => {
-                    document.getElementById("status").innerHTML = "🟢 Live updates active";
+                    document.getElementById("status").innerHTML = "Live updates active";
                 })
                 .catch(err => {
                     console.warn("SignalR failed, falling back to polling:", err);
-                    document.getElementById("status").innerHTML = "🟡 Real-time unavailable - polling every 5 seconds";
+                    document.getElementById("status").innerHTML = "Real-time unavailable - polling every 5 seconds";
                     // Fallback to polling every 5 seconds
                     setInterval(loadInventory, 5000);
                 });
@@ -111,7 +111,7 @@
                 displayItems(items);
             } catch (err) {
                 console.error("Failed to load inventory:", err);
-                document.getElementById("inventory").innerHTML = "<p>❌ Failed to load inventory</p>";
+                document.getElementById("inventory").innerHTML = "<p>Failed to load inventory</p>";
             }
         }
 
@@ -145,14 +145,14 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert(`✅ Purchased ${result.itemName} for ${result.pricePaid} gold!`);
+                    alert(`Purchased ${result.itemName} for ${result.pricePaid} gold!`);
                     loadInventory(); // Refresh immediately
                 } else {
-                    alert(`❌ Purchase failed: ${result.title || result.message || 'Unknown error'}`);
+                    alert(`Purchase failed: ${result.title || result.message || 'Unknown error'}`);
                 }
             } catch (err) {
                 console.error("Purchase failed:", err);
-                alert("❌ Purchase failed - check console");
+                alert("Purchase failed - check console");
             }
         }
 

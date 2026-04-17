@@ -33,7 +33,6 @@ public class BazaarHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
-    // Broadcast stock update - this will be called from purchase endpoint
     public static async Task BroadcastStockUpdate(IHubContext<BazaarHub> hub, int itemId, string itemName, int newStock, decimal newPrice)
     {
         try
