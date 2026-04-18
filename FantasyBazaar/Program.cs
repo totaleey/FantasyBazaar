@@ -1,3 +1,4 @@
+using FantasyBazaar.Api.BackgroundServices;
 using FantasyBazaar.Api.Data;
 using FantasyBazaar.Api.Endpoints;
 using FantasyBazaar.Api.Hubs;
@@ -43,10 +44,11 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     {
         var logger = sp.GetRequiredService<ILogger<Program>>();
         logger.LogWarning(ex, "Redis connection failed - continuing without cache");
-        return null;
+        return null;  
     }
 });
 
+builder.Services.AddHostedService<NpcManagerService>();
 builder.Services.AddDirectoryBrowser();
 
 var app = builder.Build();
@@ -71,7 +73,7 @@ app.MapGet("/health", async (AppDbContext db, IConnectionMultiplexer? redis) =>
         timestamp = DateTime.UtcNow,
         database = await db.Database.CanConnectAsync(),
         redis = redis?.IsConnected ?? false,
-        signalR = true
+        signalR = true  // SignalR always "up" from health perspective
     };
     return Results.Ok(status);
 });
@@ -79,6 +81,7 @@ app.MapGet("/health", async (AppDbContext db, IConnectionMultiplexer? redis) =>
 // Inventory endpoint - uses cache if Redis is up
 app.MapGet("/api/items", async (AppDbContext db, IConnectionMultiplexer? redis, ILogger<Program> logger) =>
 {
+    // Try cache first, but don't fail if Redis is down
     if (redis?.IsConnected == true)
     {
         try
@@ -91,7 +94,7 @@ app.MapGet("/api/items", async (AppDbContext db, IConnectionMultiplexer? redis, 
                 var cachedString = cached.ToString();
                 if (!string.IsNullOrEmpty(cachedString))
                 {
-                    var cachedItems = System.Text.Json.JsonSerializer.Deserialize<List<Item>>(cachedString);
+                    var cachedItems = JsonSerializer.Deserialize<List<Item>>(cachedString);
                     return Results.Ok(cachedItems);
                 }
             }
@@ -111,10 +114,10 @@ app.MapGet("/api/items", async (AppDbContext db, IConnectionMultiplexer? redis, 
             try
             {
                 var db_cache = redis.GetDatabase();
-                var serialized = System.Text.Json.JsonSerializer.Serialize(dbItems);
+                var serialized = JsonSerializer.Serialize(dbItems);
                 await db_cache.StringSetAsync("all_items", serialized, TimeSpan.FromSeconds(30));
             }
-            catch { /* Cache failure doesn't matter */ }
+            catch {}
         });
     }
 
