@@ -10,6 +10,43 @@
             color: white;
         }
 
+        /* Tab styling */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #444;
+            padding-bottom: 10px;
+        }
+
+        .tab-button {
+            background: #16213e;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px 5px 0 0;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+            .tab-button:hover {
+                background: #e94560;
+            }
+
+            .tab-button.active {
+                background: #e94560;
+                color: white;
+            }
+
+        .tab-content {
+            display: none;
+        }
+
+            .tab-content.active {
+                display: block;
+            }
+
         .item {
             border: 1px solid #444;
             padding: 10px;
@@ -102,14 +139,6 @@
             margin-left: 10px;
         }
 
-        .online {
-            color: #4caf50;
-        }
-
-        .offline {
-            color: #f44336;
-        }
-
         .event-banner {
             background: #e94560;
             padding: 10px;
@@ -130,17 +159,220 @@
                 transform: translateY(0);
             }
         }
+
+        /* NPC Activity Log styling */
+        .activity-log {
+            max-height: 600px;
+            overflow-y: auto;
+            background: #0f0f1a;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .log-entry {
+            padding: 8px;
+            margin: 5px 0;
+            border-left: 3px solid;
+            border-radius: 3px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+
+        .log-success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left-color: #4caf50;
+        }
+
+        .log-failure {
+            background: rgba(244, 67, 54, 0.1);
+            border-left-color: #f44336;
+        }
+
+        .log-attempt {
+            background: rgba(255, 152, 0, 0.1);
+            border-left-color: #ff9800;
+        }
+
+        .log-info {
+            background: rgba(100, 100, 100, 0.1);
+            border-left-color: #888;
+        }
+
+        .timestamp {
+            color: #888;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .npc-name {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .clear-log-btn {
+            background: #444;
+            margin-bottom: 10px;
+        }
+
+            .clear-log-btn:hover {
+                background: #666;
+            }
+
+        .npc-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #16213e;
+            border-radius: 5px;
+        }
+
+        .stat {
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+        }
     </style>
 </head>
 <body>
     <h1>🏪 Fantasy Bazaar</h1>
     <div id="status">🟡 Connecting to real-time updates...</div>
     <div id="eventMessage"></div>
-    <div id="inventory"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-button active" onclick="switchTab('shop')">🏪 Shop</button>
+        <button class="tab-button" onclick="switchTab('activity')">🤖 NPC Activity</button>
+    </div>
+
+    <!-- Shop Tab -->
+    <div id="shop-tab" class="tab-content active">
+        <div id="inventory"></div>
+    </div>
+
+    <!-- NPC Activity Tab -->
+    <div id="activity-tab" class="tab-content">
+        <div class="npc-stats">
+            <div class="stat">
+                <div class="stat-value" id="totalAttempts">0</div>
+                <div class="stat-label">Total Attempts</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="totalSuccess">0</div>
+                <div class="stat-label">Successful</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="totalFailures">0</div>
+                <div class="stat-label">Failed</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="successRate">0%</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+        </div>
+        <button class="clear-log-btn" onclick="clearActivityLog()">Clear Log</button>
+        <div id="activityLog" class="activity-log">
+            <div class="log-entry log-info">📋 Waiting for NPC activity...</div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script>
         let connection = null;
+
+        // NPC Activity tracking
+        let npcStats = {
+            attempts: 0,
+            successes: 0,
+            failures: 0
+        };
+
+        let activityLogs = [];
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update content visibility
+            document.getElementById('shop-tab').classList.remove('active');
+            document.getElementById('activity-tab').classList.remove('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        // Add NPC activity log entry
+        function addActivityLog(npcName, action, details, type) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = {
+                id: Date.now(),
+                timestamp,
+                npcName,
+                action,
+                details,
+                type
+            };
+
+            activityLogs.unshift(logEntry); // Add to beginning (newest first)
+
+            // Keep only last 100 logs
+            if (activityLogs.length > 100) {
+                activityLogs = activityLogs.slice(0, 100);
+            }
+
+            // Update stats
+            if (type === 'success') {
+                npcStats.successes++;
+            } else if (type === 'failure') {
+                npcStats.failures++;
+            }
+            npcStats.attempts++;
+
+            updateActivityDisplay();
+        }
+
+        // Update activity log UI
+        function updateActivityDisplay() {
+            // Update stats
+            document.getElementById('totalAttempts').textContent = npcStats.attempts;
+            document.getElementById('totalSuccess').textContent = npcStats.successes;
+            document.getElementById('totalFailures').textContent = npcStats.failures;
+            const successRate = npcStats.attempts > 0 ? (npcStats.successes / npcStats.attempts * 100).toFixed(1) : 0;
+            document.getElementById('successRate').textContent = `${successRate}%`;
+
+            // Update log entries
+            const logContainer = document.getElementById('activityLog');
+            if (activityLogs.length === 0) {
+                logContainer.innerHTML = '<div class="log-entry log-info">📋 Waiting for NPC activity...</div>';
+                return;
+            }
+
+            logContainer.innerHTML = activityLogs.map(log => `
+                        <div class="log-entry log-${log.type}">
+                            <div class="timestamp">${log.timestamp}</div>
+                            <span class="npc-name">${log.npcName}</span><br />
+                            <strong>${log.action}</strong><br />
+                            <small style="color:#888">${log.details}</small>
+                        </div>
+                    `).join('');
+        }
+
+        // Clear activity log
+        function clearActivityLog() {
+            activityLogs = [];
+            npcStats = { attempts: 0, successes: 0, failures: 0 };
+            updateActivityDisplay();
+        }
 
         // Connect to SignalR (with fallback polling)
         function connectSignalR() {
@@ -190,6 +422,12 @@
                 });
             });
 
+            // Handle NPC activity updates
+            connection.on("NpcActivity", (activity) => {
+                console.log("NPC Activity:", activity);
+                addActivityLog(activity.npcName, activity.action, activity.details, activity.type);
+            });
+
             connection.start()
                 .then(() => {
                     document.getElementById("status").innerHTML = "🟢 Live updates active";
@@ -232,18 +470,18 @@
         function displayItems(items) {
             const container = document.getElementById("inventory");
             container.innerHTML = items.map(item => `
-                                    <div class="item" data-item-id="${item.id}" data-item-name="${item.name}">
-                                        <strong>${item.name}</strong> ${item.isSpecial ? '✨' : ''}
-                                        <span class="status-badge ${item.stock > 5 ? 'in-stock' : (item.stock > 0 ? 'low-stock' : 'out-of-stock')}">
-                                            ${item.stock > 0 ? `${item.stock} in stock` : 'SOLD OUT'}
-                                        </span>
-                                        <div class="price">${item.currentPrice} gold</div>
-                                        <div>${item.description}</div>
-                                        <button onclick="purchaseItem(${item.id})" ${item.stock === 0 ? 'disabled' : ''}>
-                                            Buy 1
-                                        </button>
-                                    </div>
-                                `).join('');
+                        <div class="item" data-item-id="${item.id}" data-item-name="${item.name}">
+                            <strong>${item.name}</strong> ${item.isSpecial ? '✨' : ''}
+                            <span class="status-badge ${item.stock > 5 ? 'in-stock' : (item.stock > 0 ? 'low-stock' : 'out-of-stock')}">
+                                ${item.stock > 0 ? `${item.stock} in stock` : 'SOLD OUT'}
+                            </span>
+                            <div class="price">${item.currentPrice} gold</div>
+                            <div>${item.description}</div>
+                            <button onclick="purchaseItem(${item.id})" ${item.stock === 0 ? 'disabled' : ''}>
+                                Buy 1
+                            </button>
+                        </div>
+                    `).join('');
         }
 
         // Purchase item

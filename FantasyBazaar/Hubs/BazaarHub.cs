@@ -19,9 +19,7 @@ public class BazaarHub : Hub
     public override async Task OnConnectedAsync()
     {
         _logger.LogInformation("Client connected: {ConnectionId}", Context.ConnectionId);
-
         await Groups.AddToGroupAsync(Context.ConnectionId, "all-clients");
-
         await base.OnConnectedAsync();
     }
 
@@ -48,6 +46,25 @@ public class BazaarHub : Hub
         catch (Exception ex)
         {
             Console.WriteLine($"SignalR broadcast failed: {ex.Message}");
+        }
+    }
+
+    public async Task BroadcastNpcActivity(string npcName, string action, string details, string type)
+    {
+        try
+        {
+            await Clients.All.SendAsync("NpcActivity", new
+            {
+                npcName,
+                action,
+                details,
+                type,
+                timestamp = DateTime.Now.ToLocalTime().ToString("HH:mm:ss")
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast NPC activity for {NpcName}", npcName);
         }
     }
 }

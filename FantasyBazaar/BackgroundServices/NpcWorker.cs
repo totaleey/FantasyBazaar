@@ -1,5 +1,7 @@
 ﻿using FantasyBazaar.Api.Data;
 using FantasyBazaar.Api.Endpoints;
+using FantasyBazaar.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace FantasyBazaar.Api.BackgroundServices;
 
@@ -19,22 +21,22 @@ public class NpcWorker : BackgroundService
 
     private static readonly string[] NpcNames = new[]
     {
-    "Geggolo of the Golden Spittoon",
-    "Y'mhitra Rhul",
-    "Haurchefant Greystone",
-    "Alisaie Leveilleur",
-    "Thancred Waters",
-    "Tataru Taru",
-    "Yotsuyu goe Brutus",
-    "Curious Gorge",
-    "Kan-E-Senna",
-    "Aymeric de Borel",
-    "Sadr Albeaq",
-    "Merlwyb Bloefhiswyn",
-    "Lyse Hext",
-    "Godbert Manderville",
-    "Y'shtola Rhul"
-};
+        "Geggolo of the Golden Spittoon",
+        "Y'mhitra Rhul",
+        "Haurchefant Greystone",
+        "Alisaie Leveilleur",
+        "Thancred Waters",
+        "Tataru Taru",
+        "Yotsuyu goe Brutus",
+        "Curious Gorge",
+        "Kan-E-Senna",
+        "Aymeric de Borel",
+        "Sadr Albeaq",
+        "Merlwyb Bloefhiswyn",
+        "Lyse Hext",
+        "Godbert Manderville",
+        "Y'shtola Rhul"
+    };
 
     public NpcWorker(
         ILogger<NpcWorker> logger,
@@ -100,6 +102,7 @@ public class NpcWorker : BackgroundService
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<NpcWorker>>();
             var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
+            var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<BazaarHub>>();
 
             var items = db.Items.ToList();
             if (!items.Any())
@@ -111,6 +114,9 @@ public class NpcWorker : BackgroundService
             {
                 logger.LogDebug("NPC #{WorkerIndex} - {NpcName} skipped {ItemName} - out of stock",
                     _workerIndex, _npcName, randomItem.Name);
+
+                // Broadcast skipped attempt
+                await BroadcastNpcActivity(hubContext, _npcName, "Purchase skipped", $"Skipped {randomItem.Name} - out of stock", "attempt");
                 return;
             }
 
@@ -118,6 +124,9 @@ public class NpcWorker : BackgroundService
 
             logger.LogInformation("NPC #{WorkerIndex} - {NpcName} attempting to buy {Quantity}x {ItemName} (Stock: {Stock})",
                 _workerIndex, _npcName, quantity, randomItem.Name, randomItem.Stock);
+
+            // Broadcast attempt
+            await BroadcastNpcActivity(hubContext, _npcName, "Purchase attempt", $"Attempting to buy {quantity}x {randomItem.Name}", "attempt");
 
             // Call the purchase endpoint - SAME pipeline as real users!
             var httpClient = httpClientFactory.CreateClient();
@@ -130,17 +139,47 @@ public class NpcWorker : BackgroundService
                 var result = await response.Content.ReadFromJsonAsync<PurchaseResult>(stoppingToken);
                 logger.LogInformation("✅ NPC #{WorkerIndex} - {NpcName} SUCCESS: Bought {Quantity}x {ItemName} for {TotalPaid} gold. Remaining stock: {RemainingStock}",
                     _workerIndex, _npcName, quantity, randomItem.Name, result?.TotalPaid, result?.RemainingStock);
+
+                // Broadcast success
+                await BroadcastNpcActivity(hubContext, _npcName, "Purchase successful", $"✅ Bought {quantity}x {randomItem.Name} for {result?.TotalPaid} gold. Remaining stock: {result?.RemainingStock}", "success");
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync(stoppingToken);
                 logger.LogWarning("❌ NPC #{WorkerIndex} - {NpcName} FAILED: Could not buy {Quantity}x {ItemName}. Reason: {Error}",
                     _workerIndex, _npcName, quantity, randomItem.Name, error);
+
+                // Broadcast failure
+                await BroadcastNpcActivity(hubContext, _npcName, "Purchase failed", $"❌ Failed to buy {quantity}x {randomItem.Name}. Reason: {error}", "failure");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "NPC #{WorkerIndex} - {NpcName} purchase attempt failed", _workerIndex, _npcName);
+
+            // Broadcast error
+            using var scope = _serviceProvider.CreateScope();
+            var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<BazaarHub>>();
+            await BroadcastNpcActivity(hubContext, _npcName, "Purchase error", $"❌ Exception: {ex.Message}", "failure");
+        }
+    }
+
+    private static async Task BroadcastNpcActivity(IHubContext<BazaarHub> hubContext, string npcName, string action, string details, string type)
+    {
+        try
+        {
+            await hubContext.Clients.All.SendAsync("NpcActivity", new
+            {
+                npcName,
+                action,
+                details,
+                type,
+                timestamp = DateTime.Now.ToLocalTime().ToString("HH:mm:ss")
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SignalR broadcast failed: {ex.Message}");
         }
     }
 }
