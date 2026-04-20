@@ -1,157 +1,138 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <title>Fantasy Bazaar</title>
+    <title>Fantasy Bazaar - The Mystic Emporium</title>
     <style>
-        body {
-            font-family: Arial;
-            padding: 20px;
-            background: #1a1a2e;
-            color: white;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        /* Tab styling */
+        body {
+            font-family: 'Georgia', 'Times New Roman', 'Palatino', serif;
+            background: #2a1b0e;
+            background-image: linear-gradient(rgba(42, 27, 14, 0.85), rgba(42, 27, 14, 0.85)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.1"><path fill="none" stroke="%23d4a056" stroke-width="0.5" d="M10 10 L90 10 M10 20 L90 20 M10 30 L90 30 M10 40 L90 40 M10 50 L90 50 M10 60 L90 60 M10 70 L90 70 M10 80 L90 80 M10 90 L90 90 M10 10 L10 90 M20 10 L20 90 M30 10 L30 90 M40 10 L40 90 M50 10 L50 90 M60 10 L60 90 M70 10 L70 90 M80 10 L80 90 M90 10 L90 90" /></svg>');
+            background-repeat: repeat;
+            color: #2c1810;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Main container - parchment scroll */
+        .scroll-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #faf0ca;
+            background: linear-gradient(135deg, #fdf8e7 0%, #f5e6c8 100%);
+            border-radius: 4px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.1);
+            position: relative;
+            padding: 30px 25px 25px 25px;
+        }
+
+            /* Parchment edges */
+            .scroll-container::before,
+            .scroll-container::after {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 30px;
+                background: inherit;
+                border-radius: 50%;
+                filter: blur(2px);
+            }
+
+            .scroll-container::before {
+                top: -15px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            }
+
+            .scroll-container::after {
+                bottom: -15px;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            }
+
+        /* Title styling */
+        .title-section {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #c9a87b;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            color: #5c3a1e;
+            text-shadow: 2px 2px 0px #d4a056;
+            letter-spacing: 4px;
+            font-weight: normal;
+            font-family: 'Georgia', serif;
+        }
+
+        .subtitle {
+            color: #7a5a3a;
+            font-style: italic;
+            margin-top: 8px;
+            font-size: 0.9em;
+        }
+
+        /* Tab styling - like leather tabs */
         .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #444;
-            padding-bottom: 10px;
+            gap: 0px;
+            margin-bottom: 0px;
+            border-bottom: none;
+            padding-bottom: 0;
+            justify-content: center;
         }
 
         .tab-button {
-            background: #16213e;
+            background: #8b6914;
+            background: linear-gradient(to bottom, #a07828, #6b4e10);
             border: none;
-            padding: 10px 20px;
+            padding: 12px 32px;
             cursor: pointer;
-            font-size: 16px;
-            border-radius: 5px 5px 0 0;
+            font-size: 18px;
+            font-family: 'Georgia', serif;
+            font-weight: bold;
+            color: #faf0ca;
+            text-shadow: 1px 1px 0px #4a3508;
             transition: all 0.3s ease;
-            color: white;
+            position: relative;
+            margin: 0 5px;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2);
         }
 
             .tab-button:hover {
-                background: #e94560;
+                background: #a07828;
+                color: #fff8e7;
+                transform: translateY(-2px);
             }
 
             .tab-button.active {
-                background: #e94560;
-                color: white;
+                background: #9b7628;
+                background: linear-gradient(to bottom, #c49028, #8b6520);
+                color: #fff8e7;
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 -2px 5px rgba(0,0,0,0.2);
             }
 
         .tab-content {
             display: none;
+            animation: fadeIn 0.3s ease;
         }
 
             .tab-content.active {
                 display: block;
             }
 
-        .item {
-            border: 1px solid #444;
-            padding: 10px;
-            margin: 10px;
-            background: #16213e;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-
-        .in-stock {
-            color: #4caf50;
-        }
-
-        .low-stock {
-            color: #ff9800;
-        }
-
-        .out-of-stock {
-            color: #f44336;
-        }
-
-        button {
-            padding: 5px 10px;
-            margin: 5px;
-            cursor: pointer;
-            background: #e94560;
-            color: white;
-            border: none;
-            border-radius: 3px;
-        }
-
-            button:hover {
-                background: #ff6b6b;
-            }
-
-            button:disabled {
-                background: #555;
-                cursor: not-allowed;
-            }
-
-        .price {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #ffd700;
-            transition: all 0.3s ease;
-            display: inline-block;
-        }
-
-        .price-updated {
-            animation: priceFlash 0.5s ease;
-        }
-
-        @keyframes priceFlash {
-            0% {
-                color: #ffd700;
-                transform: scale(1);
-            }
-
-            50% {
-                color: #ff6600;
-                transform: scale(1.2);
-            }
-
-            100% {
-                color: #ffd700;
-                transform: scale(1);
-            }
-        }
-
-        .stock-updated {
-            animation: stockFlash 0.5s ease;
-        }
-
-        @keyframes stockFlash {
-            0% {
-                background-color: #16213e;
-            }
-
-            50% {
-                background-color: #2a3f5e;
-            }
-
-            100% {
-                background-color: #16213e;
-            }
-        }
-
-        .status-badge {
-            font-size: 0.8em;
-            margin-left: 10px;
-        }
-
-        .event-banner {
-            background: #e94560;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            text-align: center;
-            animation: slideIn 0.5s ease;
-        }
-
-        @keyframes slideIn {
+        @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(-20px);
+                transform: translateY(10px);
             }
 
             to {
@@ -160,71 +141,219 @@
             }
         }
 
-        /* NPC Activity Log styling */
+        /* Inventory grid */
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        /* Item card - like a scroll fragment */
+        .item {
+            background: #fff8e7;
+            border: 1px solid #d4a056;
+            border-radius: 4px;
+            padding: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 3px 3px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+            .item::before {
+                content: '❦';
+                position: absolute;
+                top: -10px;
+                left: 15px;
+                background: #faf0ca;
+                color: #8b6914;
+                font-size: 14px;
+                padding: 0 8px;
+            }
+
+            .item:hover {
+                transform: translateY(-3px);
+                box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
+                border-color: #c49028;
+            }
+
+        .item-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #5c3a1e;
+            border-bottom: 1px dotted #d4a056;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        .special-mark {
+            color: #c49028;
+            font-size: 1.2em;
+            margin-left: 8px;
+        }
+
+        .item-description {
+            color: #6a4e2a;
+            font-size: 0.85em;
+            font-style: italic;
+            margin: 8px 0;
+        }
+
+        .stock-status {
+            font-size: 0.85em;
+            margin: 8px 0;
+            padding: 4px 8px;
+            background: #e8dcc8;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .in-stock {
+            color: #2d6a2d;
+        }
+
+        .low-stock {
+            color: #d4951a;
+        }
+
+        .out-of-stock {
+            color: #8b3a3a;
+        }
+
+        .price {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #8b6914;
+            margin: 12px 0;
+            font-family: 'Georgia', serif;
+        }
+
+            .price::before {
+                content: '⚜ ';
+                font-size: 0.8em;
+            }
+
+        button {
+            background: #6b4e10;
+            background: linear-gradient(to bottom, #8b6520, #5a3e0a);
+            border: none;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 14px;
+            font-weight: bold;
+            color: #faf0ca;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            margin-top: 8px;
+        }
+
+            button:hover:not(:disabled) {
+                background: #9b7628;
+                transform: scale(1.02);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            }
+
+            button:disabled {
+                background: #9a8a6a;
+                cursor: not-allowed;
+                opacity: 0.6;
+            }
+
+        .buying {
+            opacity: 0.7;
+        }
+
+        /* Status banner - like a scroll strip */
+        .status-banner {
+            background: #e8dcc8;
+            border-left: 4px solid #c49028;
+            padding: 10px 20px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+            font-style: italic;
+            color: #5c3a1e;
+        }
+
+        .event-banner {
+            background: #d4c4a8;
+            border: 1px solid #c49028;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            color: #5c3a1e;
+            animation: slideIn 0.5s ease;
+        }
+
+        /* NPC Activity Log - like a weathered journal */
         .activity-log {
-            max-height: 600px;
+            max-height: 500px;
             overflow-y: auto;
-            background: #0f0f1a;
-            border-radius: 5px;
-            padding: 10px;
+            background: #f5ecda;
+            border: 1px solid #c9a87b;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 15px;
         }
 
         .log-entry {
-            padding: 8px;
-            margin: 5px 0;
+            padding: 10px;
+            margin: 8px 0;
             border-left: 3px solid;
-            border-radius: 3px;
-            font-size: 14px;
-            font-family: monospace;
+            border-radius: 2px;
+            font-size: 13px;
+            font-family: 'Georgia', monospace;
+            background: rgba(250, 240, 202, 0.5);
         }
 
         .log-success {
-            background: rgba(76, 175, 80, 0.1);
-            border-left-color: #4caf50;
+            border-left-color: #4a7a4a;
+            background: rgba(74, 122, 74, 0.08);
         }
 
         .log-failure {
-            background: rgba(244, 67, 54, 0.1);
-            border-left-color: #f44336;
+            border-left-color: #8b5a5a;
+            background: rgba(139, 90, 90, 0.05);
         }
 
         .log-attempt {
-            background: rgba(255, 152, 0, 0.1);
-            border-left-color: #ff9800;
+            border-left-color: #c49028;
+            background: rgba(196, 144, 40, 0.05);
         }
 
         .log-info {
-            background: rgba(100, 100, 100, 0.1);
-            border-left-color: #888;
+            border-left-color: #8a7a5a;
         }
 
         .timestamp {
-            color: #888;
-            font-size: 11px;
-            margin-bottom: 4px;
+            color: #8a7a5a;
+            font-size: 10px;
+            font-family: monospace;
         }
 
         .npc-name {
             font-weight: bold;
-            color: #ffd700;
+            color: #6b4e10;
         }
 
         .clear-log-btn {
-            background: #444;
-            margin-bottom: 10px;
+            background: #8a7a5a;
+            margin-bottom: 12px;
+            padding: 6px 16px;
+            font-size: 12px;
         }
-
-            .clear-log-btn:hover {
-                background: #666;
-            }
 
         .npc-stats {
             display: flex;
             gap: 20px;
             margin-bottom: 20px;
-            padding: 10px;
-            background: #16213e;
-            border-radius: 5px;
+            padding: 15px;
+            background: #e8dcc8;
+            border: 1px solid #c9a87b;
+            border-radius: 4px;
         }
 
         .stat {
@@ -233,61 +362,87 @@
         }
 
         .stat-value {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
-            color: #ffd700;
+            color: #8b6520;
+            font-family: 'Georgia', serif;
         }
 
         .stat-label {
-            font-size: 12px;
-            color: #888;
+            font-size: 11px;
+            color: #6a4e2a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .buying {
-            opacity: 0.6;
-            cursor: wait;
+        /* Scrollbar styling */
+        .activity-log::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .activity-log::-webkit-scrollbar-track {
+            background: #e8dcc8;
+            border-radius: 4px;
+        }
+
+        .activity-log::-webkit-scrollbar-thumb {
+            background: #c9a87b;
+            border-radius: 4px;
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, #c9a87b, transparent);
+            margin: 15px 0;
         }
     </style>
 </head>
 <body>
-    <h1>🏪 Fantasy Bazaar</h1>
-    <div id="status">🟡 Connecting to real-time updates...</div>
-    <div id="eventMessage"></div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-        <button class="tab-button active" onclick="switchTab('shop')">🏪 Shop</button>
-        <button class="tab-button" onclick="switchTab('activity')">🤖 NPC Activity</button>
-    </div>
-
-    <!-- Shop Tab -->
-    <div id="shop-tab" class="tab-content active">
-        <div id="inventory"></div>
-    </div>
-
-    <!-- NPC Activity Tab -->
-    <div id="activity-tab" class="tab-content">
-        <div class="npc-stats">
-            <div class="stat">
-                <div class="stat-value" id="totalAttempts">0</div>
-                <div class="stat-label">Total Attempts</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="totalSuccess">0</div>
-                <div class="stat-label">Successful</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="totalFailures">0</div>
-                <div class="stat-label">Failed</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="successRate">0%</div>
-                <div class="stat-label">Success Rate</div>
-            </div>
+    <div class="scroll-container">
+        <div class="title-section">
+            <h1>The Mystic Emporium</h1>
+            <div class="subtitle">purveyors of rare and wondrous goods</div>
         </div>
-        <button class="clear-log-btn" onclick="clearActivityLog()">Clear Log</button>
-        <div id="activityLog" class="activity-log">
-            <div class="log-entry log-info">📋 Waiting for NPC activity...</div>
+
+        <div id="status" class="status-banner">⋆ connecting to the ethereal realm ⋆</div>
+        <div id="eventMessage"></div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('shop')">⌘ Wares ⌘</button>
+            <button class="tab-button" onclick="switchTab('activity')">⌘ The Ledger ⌘</button>
+        </div>
+
+        <!-- Shop Tab -->
+        <div id="shop-tab" class="tab-content active">
+            <div id="inventory" class="inventory-grid"></div>
+        </div>
+
+        <!-- NPC Activity Tab -->
+        <div id="activity-tab" class="tab-content">
+            <div class="npc-stats">
+                <div class="stat">
+                    <div class="stat-value" id="totalAttempts">0</div>
+                    <div class="stat-label">Transactions</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalSuccess">0</div>
+                    <div class="stat-label">Fulfilled</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalFailures">0</div>
+                    <div class="stat-label">Regretted</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="successRate">0%</div>
+                    <div class="stat-label">Harmony</div>
+                </div>
+            </div>
+            <button class="clear-log-btn" onclick="clearActivityLog()">⌘ Clear the Ledger ⌘</button>
+            <div id="activityLog" class="activity-log">
+                <div class="log-entry log-info">⌘ awaiting patronage from wandering souls...</div>
+            </div>
         </div>
     </div>
 
@@ -306,11 +461,9 @@
 
         // Tab switching
         function switchTab(tabName) {
-            // Update tab buttons
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
-            // Update content visibility
             document.getElementById('shop-tab').classList.remove('active');
             document.getElementById('activity-tab').classList.remove('active');
             document.getElementById(`${tabName}-tab`).classList.add('active');
@@ -328,128 +481,101 @@
                 type
             };
 
-            activityLogs.unshift(logEntry); // Add to beginning (newest first)
+            activityLogs.unshift(logEntry);
+            if (activityLogs.length > 100) activityLogs = activityLogs.slice(0, 100);
 
-            // Keep only last 100 logs
-            if (activityLogs.length > 100) {
-                activityLogs = activityLogs.slice(0, 100);
-            }
-
-            // Update stats
-            if (type === 'success') {
-                npcStats.successes++;
-            } else if (type === 'failure') {
-                npcStats.failures++;
-            }
+            if (type === 'success') npcStats.successes++;
+            else if (type === 'failure') npcStats.failures++;
             npcStats.attempts++;
 
             updateActivityDisplay();
         }
 
-        // Update activity log UI
         function updateActivityDisplay() {
-            // Update stats
             document.getElementById('totalAttempts').textContent = npcStats.attempts;
             document.getElementById('totalSuccess').textContent = npcStats.successes;
             document.getElementById('totalFailures').textContent = npcStats.failures;
             const successRate = npcStats.attempts > 0 ? (npcStats.successes / npcStats.attempts * 100).toFixed(1) : 0;
             document.getElementById('successRate').textContent = `${successRate}%`;
 
-            // Update log entries
             const logContainer = document.getElementById('activityLog');
             if (activityLogs.length === 0) {
-                logContainer.innerHTML = '<div class="log-entry log-info">📋 Waiting for NPC activity...</div>';
+                logContainer.innerHTML = '<div class="log-entry log-info">⌘ awaiting patronage from wandering souls...</div>';
                 return;
             }
 
             logContainer.innerHTML = activityLogs.map(log => `
-                                            <div class="log-entry log-${log.type}">
-                                                <div class="timestamp">${log.timestamp}</div>
-                                                <span class="npc-name">${log.npcName}</span><br />
-                                                <strong>${log.action}</strong><br />
-                                                <small style="color:#888">${log.details}</small>
-                                            </div>
-                                        `).join('');
+                        <div class="log-entry log-${log.type}">
+                            <div class="timestamp">⌘ ${log.timestamp}</div>
+                            <span class="npc-name">${log.npcName}</span><br />
+                            <strong>${log.action}</strong><br />
+                            <small>${log.details}</small>
+                        </div>
+                    `).join('');
         }
 
-        // Clear activity log
         function clearActivityLog() {
             activityLogs = [];
             npcStats = { attempts: 0, successes: 0, failures: 0 };
             updateActivityDisplay();
         }
 
-        // Update a single item in the UI without full refresh
         function updateItemInUI(itemId, itemName, newStock, newPrice) {
             const itemDivs = document.querySelectorAll('.item');
             itemDivs.forEach(div => {
                 if (div.innerHTML.includes(itemName)) {
-                    // Update stock badge
-                    const stockBadge = div.querySelector('.status-badge');
+                    const stockBadge = div.querySelector('.stock-status');
                     if (stockBadge) {
                         if (newStock > 0) {
                             stockBadge.textContent = `${newStock} in stock`;
-                            stockBadge.className = `status-badge ${newStock > 5 ? 'in-stock' : 'low-stock'}`;
+                            stockBadge.className = `stock-status ${newStock > 5 ? 'in-stock' : 'low-stock'}`;
                         } else {
-                            stockBadge.textContent = 'SOLD OUT';
-                            stockBadge.className = 'status-badge out-of-stock';
+                            stockBadge.textContent = 'sold out';
+                            stockBadge.className = 'stock-status out-of-stock';
                         }
                     }
 
-                    // Update price if provided
                     if (newPrice) {
                         const priceSpan = div.querySelector('.price');
-                        if (priceSpan) {
-                            priceSpan.innerHTML = `${newPrice} gold`;
-                        }
+                        if (priceSpan) priceSpan.innerHTML = `${newPrice}`;
                     }
 
-                    // Update buy button
                     const buyButton = div.querySelector('button');
                     if (buyButton) {
                         buyButton.disabled = (newStock === 0);
-                        buyButton.textContent = 'Buy 1';
+                        buyButton.textContent = 'purchase';
                         buyButton.classList.remove('buying');
                     }
 
-                    // Flash effect
                     div.classList.add('stock-updated');
                     setTimeout(() => div.classList.remove('stock-updated'), 500);
                 }
             });
         }
 
-        // Connect to SignalR (with fallback polling)
         function connectSignalR() {
             connection = new signalR.HubConnectionBuilder()
                 .withUrl("/bazaarHub")
                 .withAutomaticReconnect([0, 2000, 5000, 10000])
                 .build();
 
-            // Handle stock updates - update locally instead of full refresh
             connection.on("StockUpdated", (update) => {
-                console.log("Stock update:", update);
-                document.getElementById("status").innerHTML = "🟢 Live updates active";
+                document.getElementById("status").innerHTML = "⋆ the ethereal realm whispers ⋆";
                 updateItemInUI(update.itemId, update.itemName, update.newStock, update.newPrice);
             });
 
-            // Handle price updates
             connection.on("PriceUpdated", (update) => {
-                console.log(`💰 Price update: ${update.itemName} - ${update.oldPrice} → ${update.newPrice} gold`);
-
-                // Show temporary notification for significant price changes
                 const priceChangePercent = ((update.newPrice - update.oldPrice) / update.oldPrice * 100).toFixed(1);
                 if (Math.abs(priceChangePercent) > 10) {
-                    showEventMessage(`💰 ${update.itemName} price ${priceChangePercent > 0 ? 'increased' : 'decreased'} by ${Math.abs(priceChangePercent)}%!`, priceChangePercent > 0 ? 'warning' : 'success');
+                    showEventMessage(`✧ ${update.itemName} price ${priceChangePercent > 0 ? 'rises' : 'falls'} by ${Math.abs(priceChangePercent)}% ✧`, priceChangePercent > 0 ? 'warning' : 'success');
                 }
 
-                // Find and update the price display for this item
                 const itemDivs = document.querySelectorAll('.item');
                 itemDivs.forEach(div => {
                     if (div.innerHTML.includes(update.itemName)) {
                         const priceSpan = div.querySelector('.price');
                         if (priceSpan) {
-                            priceSpan.innerHTML = `${update.newPrice} gold`;
+                            priceSpan.innerHTML = `${update.newPrice}`;
                             priceSpan.classList.add('price-updated');
                             setTimeout(() => priceSpan.classList.remove('price-updated'), 500);
                         }
@@ -457,39 +583,27 @@
                 });
             });
 
-            // Handle NPC activity updates
             connection.on("NpcActivity", (activity) => {
-                console.log("NPC Activity:", activity);
                 addActivityLog(activity.npcName, activity.action, activity.details, activity.type);
             });
 
             connection.start()
                 .then(() => {
-                    document.getElementById("status").innerHTML = "🟢 Live updates active";
+                    document.getElementById("status").innerHTML = "⋆ the ethereal realm hums with activity ⋆";
                 })
                 .catch(err => {
-                    console.warn("SignalR failed, falling back to polling:", err);
-                    document.getElementById("status").innerHTML = "🟡 Real-time unavailable - polling every 10 seconds";
-                    // Fallback to polling every 10 seconds (reduced frequency)
+                    console.warn("SignalR failed:", err);
+                    document.getElementById("status").innerHTML = "⋆ the ethereal realm is distant... updating every ten heartbeats ⋆";
                     setInterval(loadInventory, 10000);
                 });
         }
 
-        // Show temporary event message
         function showEventMessage(message, type = 'info') {
             const eventDiv = document.getElementById("eventMessage");
-            const colors = {
-                success: '#4caf50',
-                warning: '#ff9800',
-                info: '#e94560'
-            };
-            eventDiv.innerHTML = `<div class="event-banner" style="background: ${colors[type]}">${message}</div>`;
-            setTimeout(() => {
-                eventDiv.innerHTML = '';
-            }, 3000);
+            eventDiv.innerHTML = `<div class="event-banner">✧ ${message} ✧</div>`;
+            setTimeout(() => eventDiv.innerHTML = '', 3000);
         }
 
-        // Load inventory from API (only used for initial load and fallback)
         async function loadInventory() {
             try {
                 const response = await fetch('/api/items');
@@ -497,33 +611,31 @@
                 displayItems(items);
             } catch (err) {
                 console.error("Failed to load inventory:", err);
-                document.getElementById("inventory").innerHTML = "<p>❌ Failed to load inventory</p>";
+                document.getElementById("inventory").innerHTML = "<p style='text-align:center; padding:40px;'>✧ the wares are hidden from view... ✧</p>";
             }
         }
 
-        // Display items
         function displayItems(items) {
             const container = document.getElementById("inventory");
             container.innerHTML = items.map(item => `
-                                            <div class="item" data-item-id="${item.id}" data-item-name="${item.name}">
-                                                <strong>${item.name}</strong> ${item.isSpecial ? '✨' : ''}
-                                                <span class="status-badge ${item.stock > 5 ? 'in-stock' : (item.stock > 0 ? 'low-stock' : 'out-of-stock')}">
-                                                    ${item.stock > 0 ? `${item.stock} in stock` : 'SOLD OUT'}
-                                                </span>
-                                                <div class="price">${item.currentPrice} gold</div>
-                                                <div>${item.description}</div>
-                                                <button onclick="purchaseItem(${item.id}, '${item.name}')" ${item.stock === 0 ? 'disabled' : ''}>
-                                                    Buy 1
-                                                </button>
-                                            </div>
-                                        `).join('');
+                        <div class="item" data-item-id="${item.id}" data-item-name="${item.name}">
+                            <div class="item-name">${item.name}${item.isSpecial ? '<span class="special-mark">✧</span>' : ''}</div>
+                            <div class="item-description">${item.description}</div>
+                            <div class="stock-status ${item.stock > 5 ? 'in-stock' : (item.stock > 0 ? 'low-stock' : 'out-of-stock')}">
+                                ${item.stock > 0 ? `${item.stock} in stock` : 'sold out'}
+                            </div>
+                            <div class="price">${item.currentPrice}</div>
+                            <button onclick="purchaseItem(${item.id}, '${item.name.replace(/'/g, "\\'")}')" ${item.stock === 0 ? 'disabled' : ''}>
+                                purchase
+                            </button>
+                        </div>
+                    `).join('');
         }
 
-        // Purchase item - updates UI instantly from response
         async function purchaseItem(itemId, itemName) {
             const button = event.target;
             button.disabled = true;
-            button.textContent = 'Buying...';
+            button.textContent = 'sealing...';
             button.classList.add('buying');
 
             try {
@@ -536,20 +648,19 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    showEventMessage(`✅ Purchased ${result.itemName} for ${result.pricePaid} gold!`, 'success');
-                    // Update UI instantly with the response data - NO full refresh!
+                    showEventMessage(`✧ acquired ${result.itemName} for ${result.pricePaid} silver ✧`, 'success');
                     updateItemInUI(result.itemId, result.itemName, result.remainingStock, result.pricePaid);
                 } else {
-                    showEventMessage(`❌ Purchase failed: ${result.title || result.message || 'Unknown error'}`, 'warning');
+                    showEventMessage(`✧ the transaction falters: ${result.title || result.message || 'unknown misfortune'} ✧`, 'warning');
                     button.disabled = false;
-                    button.textContent = 'Buy 1';
+                    button.textContent = 'purchase';
                     button.classList.remove('buying');
                 }
             } catch (err) {
                 console.error("Purchase failed:", err);
-                showEventMessage("❌ Purchase failed - check console", 'warning');
+                showEventMessage("✧ the ethereal realm is silent... ✧", 'warning');
                 button.disabled = false;
-                button.textContent = 'Buy 1';
+                button.textContent = 'purchase';
                 button.classList.remove('buying');
             }
         }
@@ -557,6 +668,24 @@
         // Start
         loadInventory();
         connectSignalR();
+
+        // Add CSS for animations
+        const style = document.createElement('style');
+        style.textContent = `
+                    .price-updated { animation: priceFlash 0.5s ease; }
+                    @keyframes priceFlash {
+                        0% { color: #8b6914; text-shadow: none; }
+                        50% { color: #d4a056; text-shadow: 0 0 5px #ffd700; }
+                        100% { color: #8b6914; text-shadow: none; }
+                    }
+                    .stock-updated { animation: stockFlash 0.5s ease; }
+                    @keyframes stockFlash {
+                        0% { background-color: #fff8e7; }
+                        50% { background-color: #f0e0b0; }
+                        100% { background-color: #fff8e7; }
+                    }
+                `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
