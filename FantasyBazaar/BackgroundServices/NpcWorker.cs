@@ -19,11 +19,22 @@ public class NpcWorker : BackgroundService
 
     private static readonly string[] NpcNames = new[]
     {
-        "Grom the Goblin", "Madame Mystic", "Bjorn the Bold", "Elara Swiftarrow",
-        "Zarok the Shadow", "Fizzlebang", "Lady Vex", "Grimm Stonearm",
-        "Willow Whisperwind", "Kaelen Frost", "Morgana Darkmoon", "Rurik Redbeard",
-        "Sera Silverstream", "Thorne Oakenshield", "Vexia Nightshade"
-    };
+    "Geggolo of the Golden Spittoon",
+    "Y'mhitra Rhul",
+    "Haurchefant Greystone",
+    "Alisaie Leveilleur",
+    "Thancred Waters",
+    "Tataru Taru",
+    "Yotsuyu goe Brutus",
+    "Curious Gorge",
+    "Kan-E-Senna",
+    "Aymeric de Borel",
+    "Sadr Albeaq",
+    "Merlwyb Bloefhiswyn",
+    "Lyse Hext",
+    "Godbert Manderville",
+    "Y'shtola Rhul"
+};
 
     public NpcWorker(
         ILogger<NpcWorker> logger,

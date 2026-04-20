@@ -50,6 +50,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 
 builder.Services.AddHostedService<NpcManagerService>();
 builder.Services.AddHostedService<ReplenishmentService>();
+builder.Services.AddHostedService<PriceEngineService>();
 builder.Services.AddDirectoryBrowser();
 builder.Services.AddHttpClient();
 
