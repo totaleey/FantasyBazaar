@@ -49,6 +49,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 });
 
 builder.Services.AddHostedService<NpcManagerService>();
+builder.Services.AddHostedService<ReplenishmentService>();
 builder.Services.AddDirectoryBrowser();
 builder.Services.AddHttpClient();
 
