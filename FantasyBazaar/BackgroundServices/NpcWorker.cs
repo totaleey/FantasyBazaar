@@ -1,6 +1,5 @@
 ﻿using FantasyBazaar.Api.Data;
 using FantasyBazaar.Api.Endpoints;
-using System.Net.Http.Json;
 
 namespace FantasyBazaar.Api.BackgroundServices;
 
@@ -15,6 +14,7 @@ public class NpcWorker : BackgroundService
 
     // Configuration
     private int _purchasesPerMinute = 10;
+
     private bool _isEnabled = true;
 
     private static readonly string[] NpcNames = new[]
@@ -132,5 +132,4 @@ public class NpcWorker : BackgroundService
             _logger.LogError(ex, "NPC #{WorkerIndex} - {NpcName} purchase attempt failed", _workerIndex, _npcName);
         }
     }
-
 }

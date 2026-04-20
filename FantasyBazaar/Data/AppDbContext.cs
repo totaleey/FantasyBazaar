@@ -1,11 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
-using FantasyBazaar.Api.Models;
+﻿using FantasyBazaar.Api.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FantasyBazaar.Api.Data;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
 
     public DbSet<Item> Items => Set<Item>();
     public DbSet<Transaction> Transactions => Set<Transaction>();

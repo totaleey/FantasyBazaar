@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using FantasyBazaar.Api.Data;
-using FantasyBazaar.Api.Models;
+﻿using FantasyBazaar.Api.Data;
 using FantasyBazaar.Api.Hubs;
+using FantasyBazaar.Api.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace FantasyBazaar.Api.Endpoints;
 

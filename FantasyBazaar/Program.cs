@@ -44,7 +44,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     {
         var logger = sp.GetRequiredService<ILogger<Program>>();
         logger.LogWarning(ex, "Redis connection failed - continuing without cache");
-        return null;  
+        return null;
     }
 });
 
@@ -119,7 +119,7 @@ app.MapGet("/api/items", async (AppDbContext db, IConnectionMultiplexer? redis, 
                 var serialized = JsonSerializer.Serialize(dbItems);
                 await db_cache.StringSetAsync("all_items", serialized, TimeSpan.FromSeconds(30));
             }
-            catch {}
+            catch { }
         });
     }
 

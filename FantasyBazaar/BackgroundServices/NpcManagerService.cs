@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-
-namespace FantasyBazaar.Api.BackgroundServices;
+﻿namespace FantasyBazaar.Api.BackgroundServices;
 
 public class NpcManagerService : BackgroundService
 {

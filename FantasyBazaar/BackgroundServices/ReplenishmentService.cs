@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using FantasyBazaar.Api.Data;
+﻿using FantasyBazaar.Api.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace FantasyBazaar.Api.BackgroundServices;
 
