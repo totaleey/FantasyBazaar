@@ -242,6 +242,11 @@
             font-size: 12px;
             color: #888;
         }
+
+        .buying {
+            opacity: 0.6;
+            cursor: wait;
+        }
     </style>
 </head>
 <body>
@@ -358,13 +363,13 @@
             }
 
             logContainer.innerHTML = activityLogs.map(log => `
-                        <div class="log-entry log-${log.type}">
-                            <div class="timestamp">${log.timestamp}</div>
-                            <span class="npc-name">${log.npcName}</span><br />
-                            <strong>${log.action}</strong><br />
-                            <small style="color:#888">${log.details}</small>
-                        </div>
-                    `).join('');
+                                            <div class="log-entry log-${log.type}">
+                                                <div class="timestamp">${log.timestamp}</div>
+                                                <span class="npc-name">${log.npcName}</span><br />
+                                                <strong>${log.action}</strong><br />
+                                                <small style="color:#888">${log.details}</small>
+                                            </div>
+                                        `).join('');
         }
 
         // Clear activity log
@@ -374,6 +379,46 @@
             updateActivityDisplay();
         }
 
+        // Update a single item in the UI without full refresh
+        function updateItemInUI(itemId, itemName, newStock, newPrice) {
+            const itemDivs = document.querySelectorAll('.item');
+            itemDivs.forEach(div => {
+                if (div.innerHTML.includes(itemName)) {
+                    // Update stock badge
+                    const stockBadge = div.querySelector('.status-badge');
+                    if (stockBadge) {
+                        if (newStock > 0) {
+                            stockBadge.textContent = `${newStock} in stock`;
+                            stockBadge.className = `status-badge ${newStock > 5 ? 'in-stock' : 'low-stock'}`;
+                        } else {
+                            stockBadge.textContent = 'SOLD OUT';
+                            stockBadge.className = 'status-badge out-of-stock';
+                        }
+                    }
+
+                    // Update price if provided
+                    if (newPrice) {
+                        const priceSpan = div.querySelector('.price');
+                        if (priceSpan) {
+                            priceSpan.innerHTML = `${newPrice} gold`;
+                        }
+                    }
+
+                    // Update buy button
+                    const buyButton = div.querySelector('button');
+                    if (buyButton) {
+                        buyButton.disabled = (newStock === 0);
+                        buyButton.textContent = 'Buy 1';
+                        buyButton.classList.remove('buying');
+                    }
+
+                    // Flash effect
+                    div.classList.add('stock-updated');
+                    setTimeout(() => div.classList.remove('stock-updated'), 500);
+                }
+            });
+        }
+
         // Connect to SignalR (with fallback polling)
         function connectSignalR() {
             connection = new signalR.HubConnectionBuilder()
@@ -381,21 +426,11 @@
                 .withAutomaticReconnect([0, 2000, 5000, 10000])
                 .build();
 
-            // Handle stock updates
+            // Handle stock updates - update locally instead of full refresh
             connection.on("StockUpdated", (update) => {
                 console.log("Stock update:", update);
                 document.getElementById("status").innerHTML = "🟢 Live updates active";
-
-                // Find and highlight the updated item
-                const itemDivs = document.querySelectorAll('.item');
-                itemDivs.forEach(div => {
-                    if (div.innerHTML.includes(update.itemName)) {
-                        div.classList.add('stock-updated');
-                        setTimeout(() => div.classList.remove('stock-updated'), 500);
-                    }
-                });
-
-                loadInventory(); // Refresh display
+                updateItemInUI(update.itemId, update.itemName, update.newStock, update.newPrice);
             });
 
             // Handle price updates
@@ -434,9 +469,9 @@
                 })
                 .catch(err => {
                     console.warn("SignalR failed, falling back to polling:", err);
-                    document.getElementById("status").innerHTML = "🟡 Real-time unavailable - polling every 5 seconds";
-                    // Fallback to polling every 5 seconds
-                    setInterval(loadInventory, 5000);
+                    document.getElementById("status").innerHTML = "🟡 Real-time unavailable - polling every 10 seconds";
+                    // Fallback to polling every 10 seconds (reduced frequency)
+                    setInterval(loadInventory, 10000);
                 });
         }
 
@@ -454,7 +489,7 @@
             }, 3000);
         }
 
-        // Load inventory from API
+        // Load inventory from API (only used for initial load and fallback)
         async function loadInventory() {
             try {
                 const response = await fetch('/api/items');
@@ -470,22 +505,27 @@
         function displayItems(items) {
             const container = document.getElementById("inventory");
             container.innerHTML = items.map(item => `
-                        <div class="item" data-item-id="${item.id}" data-item-name="${item.name}">
-                            <strong>${item.name}</strong> ${item.isSpecial ? '✨' : ''}
-                            <span class="status-badge ${item.stock > 5 ? 'in-stock' : (item.stock > 0 ? 'low-stock' : 'out-of-stock')}">
-                                ${item.stock > 0 ? `${item.stock} in stock` : 'SOLD OUT'}
-                            </span>
-                            <div class="price">${item.currentPrice} gold</div>
-                            <div>${item.description}</div>
-                            <button onclick="purchaseItem(${item.id})" ${item.stock === 0 ? 'disabled' : ''}>
-                                Buy 1
-                            </button>
-                        </div>
-                    `).join('');
+                                            <div class="item" data-item-id="${item.id}" data-item-name="${item.name}">
+                                                <strong>${item.name}</strong> ${item.isSpecial ? '✨' : ''}
+                                                <span class="status-badge ${item.stock > 5 ? 'in-stock' : (item.stock > 0 ? 'low-stock' : 'out-of-stock')}">
+                                                    ${item.stock > 0 ? `${item.stock} in stock` : 'SOLD OUT'}
+                                                </span>
+                                                <div class="price">${item.currentPrice} gold</div>
+                                                <div>${item.description}</div>
+                                                <button onclick="purchaseItem(${item.id}, '${item.name}')" ${item.stock === 0 ? 'disabled' : ''}>
+                                                    Buy 1
+                                                </button>
+                                            </div>
+                                        `).join('');
         }
 
-        // Purchase item
-        async function purchaseItem(itemId) {
+        // Purchase item - updates UI instantly from response
+        async function purchaseItem(itemId, itemName) {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Buying...';
+            button.classList.add('buying');
+
             try {
                 const response = await fetch('/api/purchase', {
                     method: 'POST',
@@ -497,13 +537,20 @@
 
                 if (response.ok) {
                     showEventMessage(`✅ Purchased ${result.itemName} for ${result.pricePaid} gold!`, 'success');
-                    loadInventory(); // Refresh immediately
+                    // Update UI instantly with the response data - NO full refresh!
+                    updateItemInUI(result.itemId, result.itemName, result.remainingStock, result.pricePaid);
                 } else {
                     showEventMessage(`❌ Purchase failed: ${result.title || result.message || 'Unknown error'}`, 'warning');
+                    button.disabled = false;
+                    button.textContent = 'Buy 1';
+                    button.classList.remove('buying');
                 }
             } catch (err) {
                 console.error("Purchase failed:", err);
                 showEventMessage("❌ Purchase failed - check console", 'warning');
+                button.disabled = false;
+                button.textContent = 'Buy 1';
+                button.classList.remove('buying');
             }
         }
 
