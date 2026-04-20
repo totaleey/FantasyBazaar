@@ -9,8 +9,8 @@ public class NpcManagerService : BackgroundService
     private readonly List<NpcWorker> _workers = new();
     private readonly List<Task> _workerTasks = new();
 
-    private int _targetNpcCount = 5;
-    private int _purchasesPerMinute = 10;
+    private int _targetNpcCount = 10;
+    private int _purchasesPerMinute = 5;
     private bool _isEnabled = true;
 
     public NpcManagerService(

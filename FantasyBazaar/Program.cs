@@ -50,6 +50,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 
 builder.Services.AddHostedService<NpcManagerService>();
 builder.Services.AddDirectoryBrowser();
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 

@@ -1,5 +1,6 @@
 ﻿using FantasyBazaar.Api.Data;
 using FantasyBazaar.Api.Endpoints;
+using System.Net.Http.Json;
 
 namespace FantasyBazaar.Api.BackgroundServices;
 
@@ -87,6 +88,7 @@ public class NpcWorker : BackgroundService
             using var scope = _serviceProvider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<NpcWorker>>();
+            var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
 
             var items = db.Items.ToList();
             if (!items.Any())
@@ -103,12 +105,32 @@ public class NpcWorker : BackgroundService
 
             var quantity = new Random().Next(1, Math.Min(4, randomItem.Stock + 1));
 
-            logger.LogInformation("NPC #{WorkerIndex} - {NpcName} wants to buy {Quantity}x {ItemName} (Stock: {Stock})",
+            logger.LogInformation("NPC #{WorkerIndex} - {NpcName} attempting to buy {Quantity}x {ItemName} (Stock: {Stock})",
                 _workerIndex, _npcName, quantity, randomItem.Name, randomItem.Stock);
+
+            // Call the purchase endpoint - SAME pipeline as real users!
+            var httpClient = httpClientFactory.CreateClient();
+            var purchaseRequest = new PurchaseRequest(randomItem.Id, quantity, $"NPC-{_npcName}");
+
+            var response = await httpClient.PostAsJsonAsync("http://fantasybazaar.api:8080/api/purchase", purchaseRequest, stoppingToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<PurchaseResult>(stoppingToken);
+                logger.LogInformation("✅ NPC #{WorkerIndex} - {NpcName} SUCCESS: Bought {Quantity}x {ItemName} for {TotalPaid} gold. Remaining stock: {RemainingStock}",
+                    _workerIndex, _npcName, quantity, randomItem.Name, result?.TotalPaid, result?.RemainingStock);
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync(stoppingToken);
+                logger.LogWarning("❌ NPC #{WorkerIndex} - {NpcName} FAILED: Could not buy {Quantity}x {ItemName}. Reason: {Error}",
+                    _workerIndex, _npcName, quantity, randomItem.Name, error);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "NPC #{WorkerIndex} - {NpcName} purchase attempt failed", _workerIndex, _npcName);
         }
     }
+
 }
