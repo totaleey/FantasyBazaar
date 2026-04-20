@@ -20,7 +20,6 @@ public class BazaarHub : Hub
     {
         _logger.LogInformation("Client connected: {ConnectionId}", Context.ConnectionId);
 
-        // Try to join a group for item updates
         await Groups.AddToGroupAsync(Context.ConnectionId, "all-clients");
 
         await base.OnConnectedAsync();
@@ -48,7 +47,6 @@ public class BazaarHub : Hub
         }
         catch (Exception ex)
         {
-            // SignalR failure doesn't break the purchase - real-time is a nice-to-have
             Console.WriteLine($"SignalR broadcast failed: {ex.Message}");
         }
     }

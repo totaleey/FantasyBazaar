@@ -16,6 +16,7 @@
             margin: 10px;
             background: #16213e;
             border-radius: 5px;
+            transition: all 0.3s ease;
         }
 
         .in-stock {
@@ -53,6 +54,47 @@
             font-size: 1.2em;
             font-weight: bold;
             color: #ffd700;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .price-updated {
+            animation: priceFlash 0.5s ease;
+        }
+
+        @keyframes priceFlash {
+            0% {
+                color: #ffd700;
+                transform: scale(1);
+            }
+
+            50% {
+                color: #ff6600;
+                transform: scale(1.2);
+            }
+
+            100% {
+                color: #ffd700;
+                transform: scale(1);
+            }
+        }
+
+        .stock-updated {
+            animation: stockFlash 0.5s ease;
+        }
+
+        @keyframes stockFlash {
+            0% {
+                background-color: #16213e;
+            }
+
+            50% {
+                background-color: #2a3f5e;
+            }
+
+            100% {
+                background-color: #16213e;
+            }
         }
 
         .status-badge {
@@ -67,11 +109,33 @@
         .offline {
             color: #f44336;
         }
+
+        .event-banner {
+            background: #e94560;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: center;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Fantasy Bazaar</h1>
-    <div id="status">Connecting to real-time updates...</div>
+    <h1>🏪 Fantasy Bazaar</h1>
+    <div id="status">🟡 Connecting to real-time updates...</div>
+    <div id="eventMessage"></div>
     <div id="inventory"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
@@ -85,22 +149,71 @@
                 .withAutomaticReconnect([0, 2000, 5000, 10000])
                 .build();
 
+            // Handle stock updates
             connection.on("StockUpdated", (update) => {
-                console.log("Real-time update:", update);
-                document.getElementById("status").innerHTML = "Live updates active";
+                console.log("Stock update:", update);
+                document.getElementById("status").innerHTML = "🟢 Live updates active";
+
+                // Find and highlight the updated item
+                const itemDivs = document.querySelectorAll('.item');
+                itemDivs.forEach(div => {
+                    if (div.innerHTML.includes(update.itemName)) {
+                        div.classList.add('stock-updated');
+                        setTimeout(() => div.classList.remove('stock-updated'), 500);
+                    }
+                });
+
                 loadInventory(); // Refresh display
+            });
+
+            // Handle price updates
+            connection.on("PriceUpdated", (update) => {
+                console.log(`💰 Price update: ${update.itemName} - ${update.oldPrice} → ${update.newPrice} gold`);
+
+                // Show temporary notification for significant price changes
+                const priceChangePercent = ((update.newPrice - update.oldPrice) / update.oldPrice * 100).toFixed(1);
+                if (Math.abs(priceChangePercent) > 10) {
+                    showEventMessage(`💰 ${update.itemName} price ${priceChangePercent > 0 ? 'increased' : 'decreased'} by ${Math.abs(priceChangePercent)}%!`, priceChangePercent > 0 ? 'warning' : 'success');
+                }
+
+                // Find and update the price display for this item
+                const itemDivs = document.querySelectorAll('.item');
+                itemDivs.forEach(div => {
+                    if (div.innerHTML.includes(update.itemName)) {
+                        const priceSpan = div.querySelector('.price');
+                        if (priceSpan) {
+                            priceSpan.innerHTML = `${update.newPrice} gold`;
+                            priceSpan.classList.add('price-updated');
+                            setTimeout(() => priceSpan.classList.remove('price-updated'), 500);
+                        }
+                    }
+                });
             });
 
             connection.start()
                 .then(() => {
-                    document.getElementById("status").innerHTML = "Live updates active";
+                    document.getElementById("status").innerHTML = "🟢 Live updates active";
                 })
                 .catch(err => {
                     console.warn("SignalR failed, falling back to polling:", err);
-                    document.getElementById("status").innerHTML = "Real-time unavailable - polling every 5 seconds";
+                    document.getElementById("status").innerHTML = "🟡 Real-time unavailable - polling every 5 seconds";
                     // Fallback to polling every 5 seconds
                     setInterval(loadInventory, 5000);
                 });
+        }
+
+        // Show temporary event message
+        function showEventMessage(message, type = 'info') {
+            const eventDiv = document.getElementById("eventMessage");
+            const colors = {
+                success: '#4caf50',
+                warning: '#ff9800',
+                info: '#e94560'
+            };
+            eventDiv.innerHTML = `<div class="event-banner" style="background: ${colors[type]}">${message}</div>`;
+            setTimeout(() => {
+                eventDiv.innerHTML = '';
+            }, 3000);
         }
 
         // Load inventory from API
@@ -111,7 +224,7 @@
                 displayItems(items);
             } catch (err) {
                 console.error("Failed to load inventory:", err);
-                document.getElementById("inventory").innerHTML = "<p>Failed to load inventory</p>";
+                document.getElementById("inventory").innerHTML = "<p>❌ Failed to load inventory</p>";
             }
         }
 
@@ -119,18 +232,18 @@
         function displayItems(items) {
             const container = document.getElementById("inventory");
             container.innerHTML = items.map(item => `
-                    <div class="item">
-                        <strong>${item.name}</strong> ${item.isSpecial ? '✨' : ''}
-                        <span class="status-badge ${item.stock > 5 ? 'in-stock' : (item.stock > 0 ? 'low-stock' : 'out-of-stock')}">
-                            ${item.stock > 0 ? `${item.stock} in stock` : 'SOLD OUT'}
-                        </span>
-                        <div class="price">${item.currentPrice} gold</div>
-                        <div>${item.description}</div>
-                        <button onclick="purchaseItem(${item.id})" ${item.stock === 0 ? 'disabled' : ''}>
-                            Buy 1
-                        </button>
-                    </div>
-                `).join('');
+                                    <div class="item" data-item-id="${item.id}" data-item-name="${item.name}">
+                                        <strong>${item.name}</strong> ${item.isSpecial ? '✨' : ''}
+                                        <span class="status-badge ${item.stock > 5 ? 'in-stock' : (item.stock > 0 ? 'low-stock' : 'out-of-stock')}">
+                                            ${item.stock > 0 ? `${item.stock} in stock` : 'SOLD OUT'}
+                                        </span>
+                                        <div class="price">${item.currentPrice} gold</div>
+                                        <div>${item.description}</div>
+                                        <button onclick="purchaseItem(${item.id})" ${item.stock === 0 ? 'disabled' : ''}>
+                                            Buy 1
+                                        </button>
+                                    </div>
+                                `).join('');
         }
 
         // Purchase item
@@ -145,14 +258,14 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert(`Purchased ${result.itemName} for ${result.pricePaid} gold!`);
+                    showEventMessage(`✅ Purchased ${result.itemName} for ${result.pricePaid} gold!`, 'success');
                     loadInventory(); // Refresh immediately
                 } else {
-                    alert(`Purchase failed: ${result.title || result.message || 'Unknown error'}`);
+                    showEventMessage(`❌ Purchase failed: ${result.title || result.message || 'Unknown error'}`, 'warning');
                 }
             } catch (err) {
                 console.error("Purchase failed:", err);
-                alert("Purchase failed - check console");
+                showEventMessage("❌ Purchase failed - check console", 'warning');
             }
         }
 

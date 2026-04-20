@@ -1,5 +1,7 @@
 ﻿using FantasyBazaar.Api.Data;
+using FantasyBazaar.Api.Hubs;
 using FantasyBazaar.Api.Models;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FantasyBazaar.Api.BackgroundServices
@@ -8,16 +10,19 @@ namespace FantasyBazaar.Api.BackgroundServices
     {
         private readonly ILogger<PriceEngineService> _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IHubContext<BazaarHub> _hubContext;
 
         // config
         private readonly int _priceUpdateIntervalMinutes = 1;
 
         public PriceEngineService(
             ILogger<PriceEngineService> logger,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IHubContext<BazaarHub> hubContext)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _hubContext = hubContext;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -51,6 +56,7 @@ namespace FantasyBazaar.Api.BackgroundServices
             var random = new Random();
 
             var items = await db.Items.ToListAsync(stoppingToken);
+            var oldPrices = items.ToDictionary(i => i.Id, i => i.CurrentPrice);
             var updatedCount = 0;
 
             foreach (var item in items)
@@ -72,12 +78,31 @@ namespace FantasyBazaar.Api.BackgroundServices
 
                     _logger.LogInformation("💰 Price changed for {ItemName}: {OldPrice} → {NewPrice} gold (Stock: {Stock}/{MaxStock}, Popularity: {Popularity})",
                         item.Name, oldPrice, newPrice, item.Stock, originalStock, item.PopularityScore);
-
-                    // TODO: Broadcast via SignalR
                 }
             }
 
             await db.SaveChangesAsync(stoppingToken);
+
+            // Broadcast price updates via SignalR
+            foreach (var item in items.Where(i => i.CurrentPrice != oldPrices[i.Id]))
+            {
+                try
+                {
+                    await _hubContext.Clients.All.SendAsync("PriceUpdated", new
+                    {
+                        itemId = item.Id,
+                        itemName = item.Name,
+                        newPrice = item.CurrentPrice,
+                        oldPrice = oldPrices[item.Id],
+                        timestamp = DateTime.UtcNow
+                    });
+                    _logger.LogDebug("Broadcasted price update for {ItemName}", item.Name);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "SignalR broadcast failed for {ItemName}", item.Name);
+                }
+            }
 
             if (updatedCount > 0)
                 _logger.LogInformation("Price update complete - Changed {Count} items", updatedCount);
