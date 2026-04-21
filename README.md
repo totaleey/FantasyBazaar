@@ -13,8 +13,8 @@
 - **Dynamic Pricing Engine** – Prices change automatically based on stock levels, popularity scores, and random market events
 - **Autonomous NPC Shoppers** – Multiple NPCs buy items simultaneously, testing concurrency handling under real load
 - **Real-Time Updates** – SignalR pushes stock and price changes instantly to all connected clients
-- **Concurrency Safety** – Database row locks (`SELECT FOR UPDATE`) prevent overselling, even under heavy contention
-- **Containerized** – Run everything with a single `docker-compose up` command
+- **Concurrency Safety** – Database row locks prevent overselling, even under heavy contention
+- **Containerized** – Run everything with a docker compose command
 
 ---
 
@@ -33,15 +33,15 @@ The system runs completely in Docker and requires no external dependencies beyon
 
 | Concept | Implementation |
 |---------|----------------|
-| Background processing | `IHostedService` for pricing engine, NPCs, and replenishment |
+| Background processing | IHostedServices for pricing engine, NPCs, and replenishment |
 | Real-time communication | SignalR hub broadcasting stock/price updates |
-| Concurrency | `SELECT FOR UPDATE` row locks + execution strategies |
+| Concurrency | Database row locks + execution strategies |
 | Caching & distribution | Redis for inventory caching with graceful degradation |
 | System simulation | NPC agents using the same purchase pipeline |
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
