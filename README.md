@@ -4,6 +4,10 @@
 
 ---
 
+<img width="2556" height="1401" alt="image" src="https://github.com/user-attachments/assets/3bf2a524-7b70-4e3c-946b-284376068cff" />
+
+<img width="2558" height="1387" alt="image" src="https://github.com/user-attachments/assets/fe5a1788-536c-403f-b07b-08de73aebf6c" />
+
 ## Highlights
 
 - **Dynamic Pricing Engine** – Prices change automatically based on stock levels, popularity scores, and random market events
